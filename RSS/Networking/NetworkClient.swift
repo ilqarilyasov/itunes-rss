@@ -6,23 +6,30 @@
 //  Copyright © 2019 IIIyasov. All rights reserved.
 //
 
-import Foundation
+import UIKit
 
 class NetworkClient {
     
     // Holds the base URL for the iTunes RSS API
-    private let baseURL = URL(string: "https://rss.itunes.apple.com/api/v1/us/")!
-    
-    // Holds all of our model objects
-    private(set) var searchResults: [Result] = []
-    
+    private let baseURL = URL(string: "https://rss.itunes.apple.com/api/v1/us/")!    
     
     /// Performs a network call to the iTunes RSS API with the given media type and result limit.
     func fetchRSS(mediaType: String = "apple-music", resultLimit: Int = 25,
-                       completion: @escaping (Error?) -> Void) {
+                       completion: @escaping ([Result]?, Error?) -> Void) {
         
         // If mediaType is Apple Musics use 'coming-soon if it's Movies use 'top-movies'
-        let feedType = mediaType == "apple-music" ? "coming-soon" : "top-movies"
+        var feedType = "coming-soon"
+        
+        switch mediaType {
+        case MediaType.appleMusic.rawValue:
+            feedType = "coming-soon"
+        case MediaType.iosApps.rawValue:
+            feedType = "new-apps-we-love"
+        case MediaType.movies.rawValue:
+            feedType = "top-movies"
+        default:
+            break
+        }
         
         // Make url
         let url = baseURL.appendingPathComponent(mediaType)
@@ -40,14 +47,14 @@ class NetworkClient {
             // If there is an error, log it and give it to the completion handler
             if let error = error {
                 NSLog("Error fetching data: \(error)")
-                completion(error)
+                completion(nil, error)
                 return
             }
             
             // If there is no data, log it and return an error to the completion handler
             guard let data = data else {
                 NSLog("Error. No data.")
-                completion(NSError())
+                completion(nil, NSError())
                 return
             }
             
@@ -56,44 +63,14 @@ class NetworkClient {
             do {
                 // If the data can be decoded, set the results to it and call the completion handler
                 let rss = try jsonDecoder.decode(Feed.self, from: data)
-                self.searchResults = rss.results
-                completion(nil)
+                completion(rss.results, nil)
                 
             } catch {
                 // If not, log the error and pass it to the completion handler
                 NSLog("Error decoding data: \(error)")
-                completion(error)
+                completion(nil, error)
                 return
             }
-        }.resume() // **ALWAYS** make sure to resume. Otherwise you get bugs that are hard to track down and you're very confused for long time.
-    }
-    
-    
-    private func addImageData(to searchResult: Result, imageData: Data) {
-        guard let index = searchResults.firstIndex(of: searchResult) else { return }
-        
-        searchResults[index].imageData = imageData
-    }
-    
-    
-    /// Loads an image from a remote URL and loads it to the search results' image data property
-    func loadImage(_ searchResult: Result, completion: @escaping (Error?) -> Void) {
-        guard let url = URL(string: searchResult.artworkUrl100) else { return }
-        
-        URLSession.shared.dataTask(with: url) { (data, _, error) in
-            if let error = error {
-                completion(error)
-                return
-            }
-            
-            guard let data = data else {
-                completion(NSError())
-                return
-            }
-            
-            self.addImageData(to: searchResult, imageData: data)
-            completion(nil)
         }.resume()
     }
-    
 }

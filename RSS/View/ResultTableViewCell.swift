@@ -17,5 +17,22 @@ class ResultTableViewCell: UITableViewCell {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    // MARK: - Properties
+    
+    var result: Result? {
+        didSet { updateViews() }
+    }
+    
+    private func updateViews() {
+        guard let result = result else { return }
+        
+        textLabel?.text = result.artistName
+        detailTextLabel?.text = "Kind: \(result.kind.rawValue.capitalized)"
+        
+        if let imageData = result.imageData {
+            imageView?.image = UIImage(data: imageData)
+        }
+    }
 
 }

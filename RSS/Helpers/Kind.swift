@@ -10,5 +10,6 @@ import Foundation
 
 enum Kind: String, Decodable {
     case album = "album"
+    case iosSoftware = "iosSoftware"
     case movie = "movie"
 }
